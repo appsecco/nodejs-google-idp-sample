@@ -1,0 +1,20 @@
+{
+  "name": "nodejs-google-idp-sample",
+  "version": "1.0.0",
+  "description": "Authentication and Authorization with OAuth2 and Google as identity provider",
+  "dependencies": {},
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-clean": "^0.4.0",
+    "gulp-concat": "^2.6.1",
+    "gulp-markdown-pdf": "^5.1.0",
+    "gulp-merge": "^0.1.1",
+    "gulp-shell": "^0.6.5",
+    "merge-stream": "^1.0.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

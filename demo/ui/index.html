@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="google-signin-scope" content="profile email">
+    <meta name="google-signin-client_id" content="323026488616-o837nl9ddichgi4gttalsq6voabfh2mb.apps.googleusercontent.com">
+    <title>UI</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.css">
+  </head>
+  <body>
+    <div class="container content" style="padding: 1em;">
+        <div id="app">
+          <!-- Auth status and Google sign-in button -->
+          <div class="columns">
+            <div class="column">
+              <div v-if="isLoggedIn">Logged in! <a @click.prevent="signOut()">Logout</a></div>
+              <div v-else>Not logged in!</div>
+            </div>
+            <div class="column">
+              <div class="is-pulled-right">
+                <!-- Google sign-in button -->
+                <div class="g-signin2" data-onsuccess="onSignIn" data-onerror="onSignInError"></div>
+              </div>
+            </div>
+          </div>
+          <div class="columns" v-if="errorMessage">
+            <div class="column">
+                <div class="notification is-danger">
+                  {{ errorMessage }}
+                </div>
+            </div>
+          </div>
+          <div class="columns">
+            <div class="column">
+              <h2>Listing Products</h2>
+              <div class="notification is-warning" v-if="products.length === 0">
+                No product available
+              </div>
+              <ul v-else>
+                <li v-for="(p, i) in products" :index="i">{{ p.name }}</li>
+              </ul>
+            </div>
+          </div>
+          <div class="columns">
+            <div class="column">
+              <h2>Add Product</h2>
+              <form @submit.prevent="addProduct">
+                  <div class="field">
+                    <label class="label">Name</label>
+                    <div class="control">
+                      <input v-model="product.name" class="input" type="text" placeholder="Name">
+                    </div>
+                  </div>
+                  <div class="field is-grouped">
+                    <div class="control">
+                      <button class="button is-link">Submit</button>
+                    </div>
+                  </div>
+              </form>
+            </div>
+          </div>
+        </div>
+    </div>
+    <script>
+      function onSignInError(err) {
+        console.error(`Error with Google auth: ${err}`)
+      }
+
+      function onSignIn (googleUser) {
+        var profile = googleUser.getBasicProfile()
+
+        console.log('SignedIn with Google Auth')
+        console.log('Email: ' + profile.getEmail())
+
+        localStorage.setItem('googleUserProfile', JSON.stringify(profile))
+        localStorage.setItem('googleIdToken', googleUser.getAuthResponse().id_token)
+
+        // console.log('ID Token: ' + localStorage.getItem('googleIdToken'))
+
+        var refreshHandler = function () {
+          googleUser.reloadAuthResponse().then(function (response) {
+            console.log(`Successfully refreshed Google auth token`)
+            localStorage.setItem('googleIdToken', response.id_token)
+          }).catch(function (err) {
+            console.log(`Failed to refresh Google auth token`)
+          })
+        }
+
+        setInterval(refreshHandler, 1000 * 60 * 5)
+      }
+    </script>
+    <script src="https://apis.google.com/js/platform.js?onload=init" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.2/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+      // Listen for auth state change
+      window.addEventListener('load', function () {
+        console.log('Checking Google auth status..')
+        window.gapi.auth2.getAuthInstance().isSignedIn.listen(function (state) {
+          if(!state) {
+            console.log('Google auth state changed to logout.. Removing tokens')
+
+            localStorage.removeItem('googleUserProfile')
+            localStorage.removeItem('googleIdToken')
+
+            window.app.$data.isLoggedIn = false
+          }
+          else {
+            console.log('User is logged in to Google')
+            window.app.$data.isLoggedIn = true
+          }
+        })
+      })
+    </script>
+    <script>
+      window.app = new Vue({
+        el: '#app',
+        data: {
+          message: 'Hello Vue!',
+          isLoggedIn: false,
+          apiUrl: 'http://localhost:3000/api',
+          errorMessage: '',
+          products: [],
+          product: {}
+        },
+        methods: {
+          signOut: function () {
+            let gapi = window.gapi
+            gapi.auth2.getAuthInstance().disconnect()
+
+            localStorage.removeItem('googleUserProfile')
+            localStorage.removeItem('googleIdToken')
+
+            this.$data.isLoggedIn = false
+          },
+          getAuthToken: function () {
+            return localStorage.getItem('googleIdToken')
+          },
+          getAuthHeaders: function () {
+            return {
+              'Authorization': `Bearer ${this.getAuthToken()}`
+            }
+          },
+          setError: function (msg) {
+            this.$data.errorMessage = msg
+          },
+          getProducts: function () {
+            let instance = this
+            axios.get(this.$data.apiUrl + '/products', { headers: instance.getAuthHeaders() })
+            .then(function (response) {
+              instance.$data.products = response.data
+            })
+            .catch(function (err) {
+              console.log(JSON.stringify(err.response))
+              instance.setError(JSON.stringify(err.response.data))
+            })
+          },
+          addProduct: function () {
+            let instance = this
+
+            if (!this.$data.product.name) {
+              alert('Product name is required!')
+              return
+            }
+
+            axios.post(this.$data.apiUrl + '/products', this.$data.product, { headers: instance.getAuthHeaders() })
+            .then(function (response) {
+              instance.$data.product = {}
+              instance.getProducts()  
+            })
+            .catch(function (err) {
+              instance.setError(JSON.stringify(err.response.data))
+            })
+          }
+        },
+        mounted () {
+          this.getProducts()
+        }
+      })
+    </script>
+  </body>
+</html>
