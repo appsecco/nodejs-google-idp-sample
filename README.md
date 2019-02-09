@@ -1,4 +1,4 @@
-# Authentication and Authorization with OAuth2
+# Authentication and Authorization using OAuth2
 This repository contains an example of using Google as Identity Provider for authentication. For this example, we used NodeJS as the backend and VueJS as the frontend. The backend is available in `demo/api` and frontend in `demo/ui`.
 
 ## Build Presentation Content
